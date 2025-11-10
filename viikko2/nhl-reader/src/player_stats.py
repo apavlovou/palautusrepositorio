@@ -14,13 +14,13 @@ class PlayerStats:
 
     def show_stats(self, nationality):
         players = self.top_scorers_by_nationality(nationality)
-        
+
         if not players:
             self.console.print(f"[red]No players found for nationality {nationality}[/red]")
             return
 
         table = Table(title=f"NHL Players from {nationality}")
-        
+
         table.add_column("Name", style="cyan", no_wrap=True)
         table.add_column("Team", style="green")
         table.add_column("Goals", justify="right", style="magenta")
