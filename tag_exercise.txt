@@ -1,3 +1,5 @@
 Tag exercise for version 1.0.0
 
 This is the first commit after v1.0.0 tag.
+
+Second commit - adding more content.
