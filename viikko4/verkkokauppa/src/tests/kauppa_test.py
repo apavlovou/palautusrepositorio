@@ -88,3 +88,63 @@ class TestKauppa(unittest.TestCase):
 
         # varmistetaan, että summa on vain 5, koska voi ei ole varastossa
         self.pankki_mock.tilisiirto.assert_called_with("pekka", 42, "12345", "33333-44455", 5)
+
+    def test_aloita_asiointi_nollaa_edellisen_ostoskorin(self):
+        # tehdään ensimmäinen ostos
+        self.kauppa.aloita_asiointi()
+        self.kauppa.lisaa_koriin(1)  # maito, hinta 5
+        self.kauppa.tilimaksu("pekka", "12345")
+
+        # aloitetaan uusi asiointi
+        self.kauppa.aloita_asiointi()
+        self.kauppa.lisaa_koriin(2)  # leipä, hinta 3
+        self.kauppa.tilimaksu("pekka", "12345")
+
+        # varmistetaan, että toisen ostoksen summa on vain 3, ei 5+3=8
+        self.pankki_mock.tilisiirto.assert_called_with("pekka", 42, "12345", "33333-44455", 3)
+
+    def test_kauppa_pyytaa_uuden_viitenumeron_jokaiselle_maksutapahtumalle(self):
+        # määritellään että viitegeneraattori palauttaa eri arvoja
+        self.viitegeneraattori_mock.uusi.side_effect = [1, 2, 3]
+
+        # tehdään ensimmäinen ostos
+        self.kauppa.aloita_asiointi()
+        self.kauppa.lisaa_koriin(1)
+        self.kauppa.tilimaksu("pekka", "12345")
+
+        # tarkistetaan että viitegeneraattoria kutsuttiin kerran
+        self.assertEqual(self.viitegeneraattori_mock.uusi.call_count, 1)
+
+        # tehdään toinen ostos
+        self.kauppa.aloita_asiointi()
+        self.kauppa.lisaa_koriin(2)
+        self.kauppa.tilimaksu("pekka", "12345")
+
+        # tarkistetaan että viitegeneraattoria on nyt kutsuttu kaksi kertaa
+        self.assertEqual(self.viitegeneraattori_mock.uusi.call_count, 2)
+
+        # tehdään kolmas ostos
+        self.kauppa.aloita_asiointi()
+        self.kauppa.lisaa_koriin(1)
+        self.kauppa.tilimaksu("pekka", "12345")
+
+        # tarkistetaan että viitegeneraattoria on nyt kutsuttu kolme kertaa
+        self.assertEqual(self.viitegeneraattori_mock.uusi.call_count, 3)
+
+    def test_poista_korista_poistaa_tuotteen_ostoskorista(self):
+        # aloitetaan asiointi ja lisätään kaksi tuotetta
+        self.kauppa.aloita_asiointi()
+        self.kauppa.lisaa_koriin(1)  # maito, hinta 5
+        self.kauppa.lisaa_koriin(2)  # leipä, hinta 3
+        
+        # poistetaan maito korista
+        self.kauppa.poista_korista(1)
+        
+        # maksetaan
+        self.kauppa.tilimaksu("pekka", "12345")
+
+        # varmistetaan, että summa on vain 3 (leipä), ei 8
+        self.pankki_mock.tilisiirto.assert_called_with("pekka", 42, "12345", "33333-44455", 3)
+        
+        # varmistetaan että tuote palautettiin varastoon
+        self.varasto_mock.palauta_varastoon.assert_called()
